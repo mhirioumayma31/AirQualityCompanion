@@ -18,11 +18,8 @@ import org.json.JSONObject
 data class AirQualityUiState(
     val isLoading: Boolean = false,
     val airQuality: AirQuality? = null,
-    val comparison: AirQuality? = null,
     val favorites: List<City> = emptyList(),
-    val error: String? = null,
-    val comparisonError: String? = null
-)
+    val error: String? = null )
 
 class AirQualityViewModel(application: Application) :
     AndroidViewModel(application) {
@@ -39,11 +36,8 @@ class AirQualityViewModel(application: Application) :
     val uiState: StateFlow<AirQualityUiState> = _uiState.asStateFlow()   //version exposé a la lect
 
     private var searchJob: Job? = null
-    private var comparisonJob: Job? = null
-
     init {
-        searchCity("Castres")
-    }
+        searchCity("Castres") }
 
     fun searchCity(query: String) {
         val name = query.trim() //nettoyer le texte
@@ -148,49 +142,6 @@ class AirQualityViewModel(application: Application) :
         }
     }
 
-    fun compareCity(query: String) {
-        val name = query.trim()
-        if (name.isBlank()) {
-            _uiState.value = _uiState.value.copy(
-                comparisonError = "Saisis une ville à comparer."
-            )
-            return
-        }
-
-        comparisonJob?.cancel()
-        comparisonJob = viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                comparison = null,
-                comparisonError = null
-            )
-
-            try {
-                val city = repository.searchCity(name)
-                    ?: throw IllegalArgumentException("Ville introuvable.")
-
-                val result = repository.getAirQuality(city)
-
-                _uiState.value = _uiState.value.copy(
-                    comparison = result,
-                    comparisonError = null
-                )
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    comparisonError = e.message
-                        ?: "La comparaison est impossible."
-                )
-            }
-        }
-    }
-
-    fun clearComparison() {
-        _uiState.value = _uiState.value.copy(
-            comparison = null,
-            comparisonError = null
-        )
-    }
 
     fun showError(message: String) {
         _uiState.value = _uiState.value.copy(error = message)

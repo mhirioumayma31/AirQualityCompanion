@@ -11,34 +11,22 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 class AirQualityRepository {
-
     private val client = HttpClient(Android)
-
     suspend fun searchCity(query: String): City? =
         withContext(Dispatchers.IO) {
-            val response = client.get(
-                "https://geocoding-api.open-meteo.com/v1/search"
-            ) {
+            val response = client.get("https://geocoding-api.open-meteo.com/v1/search") {
                 parameter("name", query)
                 parameter("count", 1)
                 parameter("language", "fr")
-                parameter("format", "json")
-            }
-
+                parameter("format", "json") }
             val json = JSONObject(response.bodyAsText())
             val results = json.optJSONArray("results")
-            if (results == null || results.length() == 0) {
-                return@withContext null
-            }
-
+            if (results == null || results.length() == 0) { return@withContext null }
             val item = results.getJSONObject(0)
-
-            City(
-                name = item.optString("name", query),
+            City(name = item.optString("name", query),
                 country = item.optString("country", ""),
                 latitude = item.getDouble("latitude"),
-                longitude = item.getDouble("longitude")
-            )
+                longitude = item.getDouble("longitude"))
         }
 
     suspend fun getAirQuality(city: City): AirQuality =
@@ -48,23 +36,15 @@ class AirQualityRepository {
             ) {
                 parameter("latitude", city.latitude)
                 parameter("longitude", city.longitude)
-                parameter(
-                    "current",
-                    "pm2_5,pm10,ozone,nitrogen_dioxide,european_aqi"
-                )
-                parameter(
-                    "hourly",
-                    "pm2_5,pm10,ozone,nitrogen_dioxide"
-                )
+                parameter("current", "pm2_5,pm10,ozone,nitrogen_dioxide,european_aqi")
+                parameter("hourly", "pm2_5,pm10,ozone,nitrogen_dioxide")
                 parameter("forecast_days", 3)
                 parameter("timezone", "auto")
             }
 
             val json = JSONObject(response.bodyAsText())
             val current = json.optJSONObject("current")
-                ?: throw IllegalStateException(
-                    "Les données actuelles sont indisponibles."
-                )
+                ?: throw IllegalStateException("Les données actuelles sont indisponibles.")
 
             val pollutants = listOf(
                 Pollutant(
@@ -72,34 +52,23 @@ class AirQualityRepository {
                     symbol = "PM2.5",
                     value = current.numberOrNull("pm2_5"),
                     unit = "µg/m³",
-                    description =
-                        "Très petites particules pouvant pénétrer profondément dans les poumons."
-                ),
-                Pollutant(
-                    name = "Particules inhalables",
+                    description = "Très petites particules pouvant pénétrer profondément dans les poumons."),
+                Pollutant(name = "Particules inhalables",
                     symbol = "PM10",
                     value = current.numberOrNull("pm10"),
                     unit = "µg/m³",
-                    description =
-                        "Particules en suspension pouvant irriter les voies respiratoires."
-                ),
-                Pollutant(
-                    name = "Ozone",
+                    description = "Particules en suspension pouvant irriter les voies respiratoires."),
+                Pollutant(name = "Ozone",
                     symbol = "O₃",
                     value = current.numberOrNull("ozone"),
                     unit = "µg/m³",
-                    description =
-                        "Polluant pouvant irriter les yeux et les voies respiratoires."
-                ),
+                    description = "Polluant pouvant irriter les yeux et les voies respiratoires."),
                 Pollutant(
                     name = "Dioxyde d'azote",
                     symbol = "NO₂",
                     value = current.numberOrNull("nitrogen_dioxide"),
                     unit = "µg/m³",
-                    description =
-                        "Polluant notamment associé au trafic routier et à la combustion."
-                )
-            )
+                    description = "Polluant notamment associé au trafic routier et à la combustion."))
 
 
             val hourly = json.optJSONObject("hourly")
@@ -125,7 +94,6 @@ class AirQualityRepository {
                     }
                 }
             }
-
             AirQuality(
                 city = city,
                 aqi = current.numberOrNull("european_aqi")?.toInt(),
@@ -135,18 +103,9 @@ class AirQualityRepository {
                 hourlyPm25 = readHourlyValues("pm2_5"),
                 hourlyPm10 = readHourlyValues("pm10"),
                 hourlyOzone = readHourlyValues("ozone"),
-                hourlyNo2 = readHourlyValues("nitrogen_dioxide"),
-
-            )
-
-
-
-        }
-
+                hourlyNo2 = readHourlyValues("nitrogen_dioxide"),)}
     fun close() {
-        client.close()
-    }
-
+        client.close() }
     private fun JSONObject.numberOrNull(key: String): Double? {
         if (isNull(key) || !has(key)) return null
         val value = optDouble(key, Double.NaN)

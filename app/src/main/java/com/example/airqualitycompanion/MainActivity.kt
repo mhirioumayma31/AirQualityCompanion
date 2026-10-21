@@ -18,7 +18,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CompareArrows
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
@@ -54,47 +53,34 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MaterialTheme {
-                AirQualityApp()
-            }
-        }
+                AirQualityApp()} }
     }
 }
 
-private data class AppTab(
-    val route: String,
-    val label: String,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector
-)
+private data class AppTab(val route: String, val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
 
 @Composable
 private fun AirQualityApp(
     vm: AirQualityViewModel = viewModel()
-) {
-    val state by vm.uiState.collectAsState()
+) { val state by vm.uiState.collectAsState()
     val navController = rememberNavController()
     val context = LocalContext.current
-
-    val tabs = listOf(
-        AppTab("home", "Accueil", Icons.Default.Home),
+    val tabs = listOf(AppTab("home", "Accueil", Icons.Default.Home),
         AppTab("forecast", "Prévisions", Icons.Default.Timeline),
         AppTab("favorites", "Favoris", Icons.Default.Favorite),
-        AppTab("compare", "Comparer", Icons.Default.CompareArrows),
         AppTab("details", "Polluants", Icons.Default.Info)
     )
 
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
-
     fun loadLocation() {
         val manager = context.getSystemService(
             android.content.Context.LOCATION_SERVICE
         ) as LocationManager
 
-        try {
-            val providers = manager.getProviders(true)
+        try { val providers = manager.getProviders(true)
             val location = providers.mapNotNull { provider ->
-                try {
-                    manager.getLastKnownLocation(provider)
+                try { manager.getLastKnownLocation(provider)
                 } catch (_: SecurityException) {
                     null
                 }
@@ -222,13 +208,7 @@ private fun AirQualityApp(
                 )
             }
 
-            composable("compare") {
-                CompareScreen(
-                    state = state,
-                    onCompare = vm::compareCity,
-                    onClear = vm::clearComparison
-                )
-            }
+
 
             composable("details") {
                 DetailsScreen(state.airQuality)
@@ -947,119 +927,4 @@ private fun FavoritesScreen(
     }
 }
 
-@Composable
-private fun CompareScreen(
-    state: AirQualityUiState,
-    onCompare: (String) -> Unit,
-    onClear: () -> Unit
-) {
-    var query by remember { mutableStateOf("") }
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text(
-            "Comparer deux villes",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
-
-        Text(
-            "La ville de référence est celle affichée sur l'accueil. " +
-                    "Saisis une deuxième ville pour comparer les indices."
-        )
-
-        OutlinedTextField(
-            value = query,
-            onValueChange = { query = it },
-            label = { Text("Deuxième ville") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Button(
-            onClick = { onCompare(query) },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.Default.CompareArrows, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text("Comparer")
-        }
-
-        state.comparisonError?.let {
-            Text(it, color = MaterialTheme.colorScheme.error)
-        }
-
-        val first = state.airQuality
-        val second = state.comparison
-
-        if (first == null) {
-            Text("Charge d'abord une ville depuis l'accueil.")
-        } else if (second != null) {
-            Card(Modifier.fillMaxWidth()) {
-                Column(
-                    Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    ComparisonRow(
-                        cityName = first.city.name,
-                        aqi = first.aqi
-                    )
-                    HorizontalDivider()
-                    ComparisonRow(
-                        cityName = second.city.name,
-                        aqi = second.aqi
-                    )
-                    HorizontalDivider()
-
-                    val difference = if (
-                        first.aqi != null && second.aqi != null
-                    ) {
-                        kotlin.math.abs(first.aqi - second.aqi)
-                    } else null
-
-                    Text(
-                        difference?.let {
-                            "Écart entre les indices : $it"
-                        } ?: "Impossible de calculer l'écart."
-                    )
-
-                    Text(
-                        "Un indice plus faible correspond généralement " +
-                                "à une meilleure qualité de l'air."
-                    )
-
-                    OutlinedButton(
-                        onClick = onClear,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Effacer la comparaison")
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ComparisonRow(cityName: String, aqi: Int?) {
-    Row(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(cityName, fontWeight = FontWeight.Bold)
-            Text("Indice européen")
-        }
-        Text(
-            aqi?.toString() ?: "—",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
